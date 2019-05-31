@@ -242,7 +242,63 @@ CONTAINS
     TYPE(ESMF_VM),INTENT(IN)                 :: vm
     INTEGER,INTENT(OUT),OPTIONAL             :: rc
 
+    INTEGER :: fieldCount, localPet, petCount
+    TYPE(ESMF_Field), DIMENSION(:), ALLOCATABLE :: fieldList
+    CHARACTER(len=ESMF_MAXSTR) :: fieldName
+    REAL(ESMF_KIND_R8), DIMENSION(:), POINTER :: icepack_field
+    REAL(ESMF_KIND_R8), DIMENSION(:), POINTER :: ptr
+    INTEGER :: nn
+
     rc = ESMF_FAILURE
+
+    CALL ESMF_VMGet(vm, localPet=localPet, petCount=petCount, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU,    &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! get a list of fields and their names from the ISM export field bundle
+    fieldCount = 0
+    CALL ESMF_FieldBundleGet(ISM_ExpFB, fieldCount=fieldCount, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ALLOCATE(fieldList(fieldCount))
+    CALL ESMF_FieldBundleGet(ISM_ExpFB, fieldList=fieldList, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! Copy the data for each field
+    DO nn = 1, fieldCount
+      CALL ESMF_FieldGet(fieldList(nn), name=fieldName, rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, file=__FILE__)) &
+           CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      CALL ESMF_FieldGet(fieldList(nn), farrayPtr=ptr, rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+           line=__LINE__, file=__FILE__)) &
+           CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      SELECT CASE (TRIM(ADJUSTL(fieldName)))
+      CASE ('ISM_thick')
+        CALL icepack_simulation_data%get_thickness(icepack_field)
+        ptr = icepack_field
+
+      CASE DEFAULT
+        msg = "ERROR: unknown variable: "//TRIM(ADJUSTL(fieldName))
+        CALL ESMF_LogWrite(msg, logmsgFlag=ESMF_LOGMSG_ERROR, &
+             line=__LINE__, file=__FILE__, rc=rc)
+        CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      ENDSELECT
+
+      IF (ASSOCIATED(ptr)) NULLIFY(ptr)
+
+    ENDDO
+
+    rc = ESMF_SUCCESS
 
   END SUBROUTINE
 
