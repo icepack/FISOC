@@ -73,6 +73,18 @@ CONTAINS
     END IF
     CALL icepack2ESMF_mesh(FISOC_config, icepack_simulation_data, ISM_mesh, vm, rc=rc)
 
+    CALL FISOC_populateFieldBundle(ISM_ReqVarList, ISM_ExpFB, ISM_mesh, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! Get required variables from the ice sheet model and convert them to the
+    ! equivalent ESMF data structures.
+    CALL getFieldDataFromISM(ISM_ExpFB, FISOC_config, vm, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     rc = ESMF_SUCCESS
 
   END SUBROUTINE
@@ -195,6 +207,8 @@ CONTAINS
     ALLOCATE(node_coords(2 * num_nodes))
     node_coords = reshape(coordinates, (/2 * num_nodes/))
 
+    ! Make all nodes owned by PET 0.
+    ! TODO: Get ownership from the PETSc DMPlex.
     ALLOCATE(node_owners(num_nodes))
     node_owners = 0
 
@@ -218,6 +232,17 @@ CONTAINS
         nodeIds=node_ids, nodeCoords=node_coords, nodeOwners=node_owners, &
         elementIds=elem_ids, elementTypes=elem_types, elementConn=elem_conn, &
         rc=rc)
+
+  END SUBROUTINE
+
+
+  SUBROUTINE getFieldDataFromISM(ISM_ExpFB, FISOC_config, vm, rc)
+    TYPE(ESMF_fieldBundle),INTENT(INOUT)     :: ISM_ExpFB
+    TYPE(ESMF_config),INTENT(INOUT)          :: FISOC_config
+    TYPE(ESMF_VM),INTENT(IN)                 :: vm
+    INTEGER,INTENT(OUT),OPTIONAL             :: rc
+
+    rc = ESMF_FAILURE
 
   END SUBROUTINE
 
