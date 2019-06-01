@@ -10,11 +10,12 @@ MODULE FISOC_ISM_Wrapper
   IMPLICIT NONE
 
   PRIVATE
+  REAL(ESMF_KIND_R8), PARAMETER :: year_in_sec = 365.25 * 24 * 3600
+  REAL(ESMF_KIND_R8) :: dt
+  TYPE(simulation), SAVE :: icepack_simulation_data
 
   PUBLIC :: FISOC_ISM_Wrapper_Init_Phase1, FISOC_ISM_WRAPPER_Init_Phase2, &
     FISOC_ISM_Wrapper_Run, FISOC_ISM_Wrapper_Finalize
-
-  TYPE(simulation), SAVE :: icepack_simulation_data
 
 CONTAINS
 
@@ -30,7 +31,7 @@ CONTAINS
 
     CHARACTER(len=ESMF_MAXSTR),ALLOCATABLE:: ISM_ReqVarList(:)
     CHARACTER(len=ESMF_MAXSTR)            :: label, icepack_configName
-    INTEGER                               :: localPet, ISM_dt_sec
+    INTEGER                               :: localPet, ISM_dt
     LOGICAL                               :: verbose_coupling
 
     rc = ESMF_FAILURE
@@ -84,6 +85,13 @@ CONTAINS
     IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) &
          CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    CALL FISOC_ConfigDerivedAttribute(FISOC_config, ISM_dt, 'ISM_dt_sec', rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    dt = ISM_dt * year_in_sec
 
     rc = ESMF_SUCCESS
 
@@ -158,7 +166,10 @@ CONTAINS
     ! TODO: write this
 
     CALL ESMF_VMBarrier(vm, rc=rc)
-    ! Run the ice sheet model.
+
+    CALL icepack_simulation_data%prognostic_solve(dt)
+    CALL icepack_simulation_data%diagnostic_solve()
+
     CALL ESMF_VMBarrier(vm, rc=rc)
 
     CALL getFieldDataFromISM(ISM_ExpFB, FISOC_config, vm, rc=rc)
