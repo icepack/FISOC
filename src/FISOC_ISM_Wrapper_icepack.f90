@@ -290,6 +290,11 @@ CONTAINS
         CALL icepack_simulation_data%get_thickness(icepack_field)
         ptr = -917.0 / 1024 * icepack_field
 
+      CASE ('ISM_z_l0_previous', 'ISM_z_l1')
+        msg = "WARNING: ignored variable: "//TRIM(ADJUSTL(fieldName))
+        CALL ESMF_LogWrite(msg, logmsgFlag=ESMF_LOGMSG_WARNING, &
+             line=__LINE__, file=__FILE__, rc=rc)
+
       CASE DEFAULT
         msg = "ERROR: unknown variable: "//TRIM(ADJUSTL(fieldName))
         CALL ESMF_LogWrite(msg, logmsgFlag=ESMF_LOGMSG_ERROR, &
