@@ -131,7 +131,42 @@ CONTAINS
     TYPE(ESMF_VM),INTENT(IN)             :: vm
     INTEGER,INTENT(OUT),OPTIONAL         :: rc
 
+    INTEGER                      :: localPet
+    LOGICAL                      :: verbose_coupling
+
     rc = ESMF_FAILURE
+
+    CALL ESMF_VMGet(vm, localPet=localPet, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    CALL ESMF_ConfigGetAttribute(FISOC_config, verbose_coupling, label='verbose_coupling:', rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    IF ((verbose_coupling).AND.(localPet.EQ.0)) THEN
+       PRINT*,""
+       PRINT*,"******************************************************************************"
+       PRINT*,"************        ISM wrapper.  Run method.           **********************"
+       PRINT*,"******************************************************************************"
+       PRINT*,""
+    END IF
+
+    ! Get the ocean model variables and send them to the ice sheet model.
+    ! TODO: write this
+
+    CALL ESMF_VMBarrier(vm, rc=rc)
+    ! Run the ice sheet model.
+    CALL ESMF_VMBarrier(vm, rc=rc)
+
+    CALL getFieldDataFromISM(ISM_ExpFB, FISOC_config, vm, rc=rc)
+    IF (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) &
+         CALL ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    rc = ESMF_SUCCESS
 
   END SUBROUTINE
 
