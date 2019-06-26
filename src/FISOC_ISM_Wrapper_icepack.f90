@@ -333,11 +333,27 @@ CONTAINS
         ptr = icepack_field
 
       CASE ('ISM_z_l0')
+        ! TODO: Grounded ice
         CALL icepack_simulation_data%get_thickness(icepack_field)
         ptr = -917.0 / 1024 * icepack_field
 
-      CASE ('ISM_z_l0_previous', 'ISM_z_l1')
-        msg = "WARNING: ignored variable: "//TRIM(ADJUSTL(fieldName))
+      CASE ('ISM_z_lts')
+        ! TODO: Grounded ice
+        CALL icepack_simulation_data%get_thickness(icepack_field)
+        ptr = (1 - 917.0 / 1024) * icepack_field
+
+      CASE ('ISM_gmask')
+        ! TODO: Grounded ice
+        ptr = 0
+
+      CASE ('ISM_z_l0_previous', 'ISM_z_l1', 'ISM_z_lts_previous', &
+            'ISM_temperature_l0', 'ISM_temperature_l1', 'ISM_velocity_l0')
+        msg = "WARNING: ignored variable: " // TRIM(ADJUSTL(fieldName))
+        CALL ESMF_LogWrite(msg, logmsgFlag=ESMF_LOGMSG_WARNING, &
+             line=__LINE__, file=__FILE__, rc=rc)
+
+      CASE ('ISM_dTdz_l0', 'ISM_dddt', 'ISM_dsdt', 'ISM_z_l0_linterp')
+        msg = "INFO: not extracting derived variable: " // TRIM(ADJUSTL(fieldName))
         CALL ESMF_LogWrite(msg, logmsgFlag=ESMF_LOGMSG_WARNING, &
              line=__LINE__, file=__FILE__, rc=rc)
 
